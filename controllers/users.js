@@ -29,4 +29,57 @@ const createUser = (req, res) => {
     });
 };
 
-module.exports = { createUser, getAllUsers, getUser };
+const updateUser = (req, res) => {
+  const { name, about } = req.body;
+  User.findByIdAndUpdate(req.user._id,
+    {
+      name,
+      about,
+    },
+    {
+      new: true,
+      runValidators: true,
+    })
+    .then((result) => res.send({ data: result }))
+    .catch((error) => {
+      if (error.name === 'ValidationError') {
+        res.status(400).send({
+          message: error.message,
+        });
+        return;
+      }
+
+      res.status(500).send({
+        message: `Произошла ошибка: ${error.message}`,
+      });
+    });
+};
+
+const updateAvatar = (req, res) => {
+  const { avatar } = req.body;
+  User.findByIdAndUpdate(req.user._id,
+    {
+      avatar,
+    },
+    {
+      new: true,
+      runValidators: true,
+    })
+    .then((result) => res.send({ data: result }))
+    .catch((error) => {
+      if (error.name === 'ValidationError') {
+        res.status(400).send({
+          message: error.message,
+        });
+        return;
+      }
+
+      res.status(500).send({
+        message: `Произошла ошибка: ${error.message}`,
+      });
+    });
+};
+
+module.exports = {
+  createUser, getAllUsers, getUser, updateUser, updateAvatar,
+};
