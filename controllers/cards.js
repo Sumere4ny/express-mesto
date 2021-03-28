@@ -29,4 +29,57 @@ const createCard = (req, res) => {
     });
 };
 
-module.exports = { getAllCards, createCard, deleteCard };
+const likeCard = (req, res) => {
+  Card.findByIdAndUpdate(req.params.cardId,
+    {
+      $addToSet: { likes: req.user._id },
+    },
+    {
+      new: true,
+    })
+    .then((result) => {
+      if (result) {
+        res.send({ data: result });
+        return;
+      }
+
+      res.status(404).send({
+        message: 'Карточка не найдена',
+      });
+    })
+    .catch((error) => res.status(500).send({
+      message: `На сервере произошла ошибка: ${error.message}`,
+    }));
+};
+
+const dislikeCard = (req, res) => {
+  Card.findByIdAndUpdate(req.params.cardId,
+    {
+      $pull: { likes: req.user._id },
+    },
+    {
+      new: true,
+    })
+    .then((result) => {
+      if (result) {
+        res.send({ data: result });
+        return;
+      }
+
+      res.status(404).send({
+        message: 'Карточка не найдена',
+      });
+    })
+    .catch((error) => res.status(500).send({
+      message: `Произошла ошибка: ${error.message}`,
+    }));
+};
+
+module.exports = {
+  getAllCards,
+  createCard,
+  deleteCard,
+  likeCard,
+  // eslint-disable-next-line comma-dangle
+  dislikeCard
+};
