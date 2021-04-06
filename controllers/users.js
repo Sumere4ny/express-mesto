@@ -1,4 +1,6 @@
+const bcrypt = require('bcryptjs');
 const User = require('../models/user');
+const JWT_SECRET = 'some-secret-key';
 
 const getAllUsers = (req, res) => User.find({})
   .then((user) => res.send({ data: user }))
@@ -20,12 +22,47 @@ const getUser = (req, res) => {
 };
 
 const createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  User.create({ name, about, avatar })
-    .then((user) => res.status(200).send(user))
+  const { email, password, name, about, avatar, } = req.body;
+  User.findOne({ email })
+    .then((user) => {
+      if (user) {
+        throw new Conflict('Пользователь уже зарегистрирован');
+      }
+      bcrypt.hash(password, 10)
+        .then((hash) => User.create({
+          email, password: hash, name, about, avatar,
+        }))
+        .then((data) => {
+          res.send({
+            email: data.email,
+            name: data.name,
+            about: data.about,
+            avatar: data.avatar,
+            _id: data._id,
+          });
+        });
+    })
     .catch((err) => {
-      if (err.name === 'ValidationError') return res.status(400).send({ message: err.message });
-      return res.status(500).send({ message: 'Произошла ошибка' });
+      if (err instanceof mongoose.Error.ValidationError) {
+        return res.status(400).send({ message: err.message });
+      }
+      return next(err);
+    });
+};
+
+const login = (req, res, next) => {
+  const { email, password } = req.body;
+
+  return User.findOne({ email }).select('+password')
+    .then((user) => {
+      if (!user) {
+        throw new Unauthorized('Пользователь не зарегистрирован');
+      }
+      const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+      res.send({ token });
+    })
+    .catch((err) => {
+      next(err);
     });
 };
 
@@ -81,5 +118,5 @@ const updateAvatar = (req, res) => {
 };
 
 module.exports = {
-  createUser, getAllUsers, getUser, updateUser, updateAvatar,
+  createUser, getAllUsers, getUser, updateUser, updateAvatar, login
 };
