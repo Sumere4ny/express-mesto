@@ -1,32 +1,46 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const JWT_SECRET = 'some-secret-key';
 
 const getAllUsers = (req, res) => User.find({})
   .then((user) => res.send({ data: user }))
-  .catch((err) => res.status(500).send({ message: err.message }));
+  .catch((err) => res.status(500).send({ message: `Произошла ошибка: ${error.message}` }));
 
 const getUser = (req, res) => {
   User.findById(req.params.id)
     .orFail(new Error('NotValidId'))
-    .then((user) => {
-      res.status(200).send(user);
-    })
+    .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.message === 'NotValidId') {
-        res.status(404).send({ message: 'Нет такого пользователя' });
+        res.status(404).send({ message: 'Нет пользователя с таким id' });
       } else {
-        res.status(500).send({ message: 'Произошла ошибка' });
+        res.status(500).send({ message: `Произошла ошибка: ${error.message}` });
       }
     });
 };
 
-const createUser = (req, res) => {
+const getCurrentUser = (req, res) => {
+  User.findById(req.user._id)
+    .orFail(new Error('NotValidId'))
+    .then((user) => res.status(200).send(user))
+    .catch((err) => {
+      if (err.message === 'NotValidId') {
+        res.status(404).send({ message: 'Нет пользователя с таким id' });
+      } else {
+        res.status(500).send({ message: `Произошла ошибка: ${error.message}` });
+      }
+    });
+};
+
+const createUser = (req, res, next) => {
   const { email, password, name, about, avatar, } = req.body;
   User.findOne({ email })
     .then((user) => {
       if (user) {
-        throw new Conflict('Пользователь уже зарегистрирован');
+        const err = new Error('Пользователь уже зарегистрирован');
+        err.statusCode = 409;
+        return next(err);
       }
       bcrypt.hash(password, 10)
         .then((hash) => User.create({
@@ -56,10 +70,17 @@ const login = (req, res, next) => {
   return User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
-        throw new Unauthorized('Пользователь не зарегистрирован');
+        const err = new Error('Пользователь не зарегистрирован');
+        err.statusCode = 401;
+        return next(err);
       }
       const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-      res.send({ token });
+      res.cookie('jwt', token, {
+        maxAge: 3600000 * 24 * 7,
+        httpOnly: true,
+        sameSite: true,
+      })
+        .end();
     })
     .catch((err) => {
       next(err);
@@ -80,9 +101,7 @@ const updateUser = (req, res) => {
     .then((result) => res.send({ data: result }))
     .catch((error) => {
       if (error.name === 'ValidationError') {
-        res.status(400).send({
-          message: error.message,
-        });
+        res.status(400).send({ message: error.message });
         return;
       }
 
@@ -105,9 +124,7 @@ const updateAvatar = (req, res) => {
     .then((result) => res.send({ data: result }))
     .catch((error) => {
       if (error.name === 'ValidationError') {
-        res.status(400).send({
-          message: error.message,
-        });
+        res.status(400).send({ message: error.message });
         return;
       }
 
@@ -117,6 +134,4 @@ const updateAvatar = (req, res) => {
     });
 };
 
-module.exports = {
-  createUser, getAllUsers, getUser, updateUser, updateAvatar, login
-};
+module.exports = { createUser, getAllUsers, getUser, updateUser, updateAvatar, login, getCurrentUser, JWT_SECRET };
