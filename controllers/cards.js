@@ -4,20 +4,26 @@ const getAllCards = (req, res) => Card.find({})
   .then((user) => res.send({ data: user }))
   .catch((err) => res.status(500).send({ message: err.message }));
 
-const deleteCard = (req, res) => {
-  Card.findByIdAndRemove(req.params.id)
-    .orFail(new Error('NotValidId'))
-    .then((user) => {
-      res.status(200).send(user);
-    })
-    .catch((err) => {
-      if (err.message === 'NotValidId') {
-        res.status(404).send({ message: 'Нет такой карточки' });
-      } else {
-        res.status(500).send({ message: 'Произошла ошибка' });
-      }
-    });
-};
+  const deleteCard = (req, res, next) => Card.findById(req.params.id)
+  .then((card) => {
+    if (!card) {
+      throw new Error('Карточка не найдена');
+    }
+    if (JSON.stringify(card.owner) === JSON.stringify(req.user._id)) {
+      return Card.findByIdAndRemove(req.params.id).then((data) => res.send(data));
+    }
+    const err = new Error('Вы не можете удалить карточку другого пользователя');
+    err.statusCode = 403;
+    return next(err);
+  })
+  .catch((err) => {
+    if (err.name === 'CastError') {
+      const error = new Error('Карточка не найдена');
+      error.statusCode = 404;
+      return next(error);
+    }
+    return next(err);
+  });
 
 const createCard = (req, res) => {
   const { name, link } = req.body;
@@ -80,6 +86,5 @@ module.exports = {
   createCard,
   deleteCard,
   likeCard,
-  // eslint-disable-next-line comma-dangle
-  dislikeCard
+  dislikeCard,
 };

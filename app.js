@@ -1,5 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const auth = require('./middlewares/auth.js');
 const usersRouter = require('./routes/users.js');
 const cardsRouter = require('./routes/cards.js');
 
@@ -20,8 +22,12 @@ app.use((req, res, next) => {
     _id: '606033e1b622a8139459a7b2',
   };
 
-  next();
-});
+app.use(cookieParser());
+
+app.use('/signin', login);
+app.use('/signup', createUser);
+
+app.use(auth);
 
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
