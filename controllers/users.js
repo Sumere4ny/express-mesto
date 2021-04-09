@@ -1,4 +1,7 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const JWT_SECRET = 'some-secret-key';
 
 const getAllUsers = (req, res) => {
   User.find({})
@@ -10,21 +13,19 @@ const getAllUsers = (req, res) => {
 const getUser = (req, res) => {
   User.findById(req.params.id)
     .orFail(new Error('NotValidId'))
-    .then((user) => {
-      res.status(200).send(user);
-    })
+    .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.message === 'NotValidId') {
-        res.status(404).send({ message: 'Нет такого пользователя' });
+        res.status(404).send({ message: 'Нет пользователя с таким id' });
       } else {
         res.status(500).send({ message: `Произошла ошибка: ${err.message}` });
       }
     });
 };
 
-const createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  User.create({ name, about, avatar })
+const getCurrentUser = (req, res) => {
+  User.findById(req.user._id)
+    .orFail(new Error('NotValidId'))
     .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.message === 'NotValidId') {
@@ -141,6 +142,4 @@ const updateAvatar = (req, res) => {
     });
 };
 
-module.exports = {
-  createUser, getAllUsers, getUser, updateUser, updateAvatar,
-};
+module.exports = { createUser, getAllUsers, getUser, updateUser, updateAvatar, login, getCurrentUser, JWT_SECRET };

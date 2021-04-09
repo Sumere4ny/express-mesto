@@ -4,6 +4,8 @@ const cookieParser = require('cookie-parser');
 const auth = require('./middlewares/auth.js');
 const usersRouter = require('./routes/users.js');
 const cardsRouter = require('./routes/cards.js');
+const { createUser, login } = require('./controllers/users');
+
 
 const app = express();
 const { PORT = 3000 } = process.env;
@@ -17,10 +19,6 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use((req, res, next) => {
-  req.user = {
-    _id: '606033e1b622a8139459a7b2',
-  };
 
 app.use(cookieParser());
 
