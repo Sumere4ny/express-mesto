@@ -4,7 +4,7 @@ const getAllCards = (req, res) => Card.find({})
   .then((user) => res.send({ data: user }))
   .catch((err) => res.status(500).send({ message: err.message }));
 
-  const deleteCard = (req, res, next) => Card.findById(req.params.id)
+const deleteCard = (req, res, next) => Card.findById(req.params.id)
   .then((card) => {
     if (!card) {
       throw new Error('Карточка не найдена');
