@@ -9,20 +9,6 @@ const getAllUsers = (req, res) => {
     .catch((err) => res.status(500).send({ message: `Произошла ошибка: ${err.message}` }));
 }
 
-
-const getUser = (req, res) => {
-  User.findById(req.params.id)
-    .orFail(new Error('NotValidId'))
-    .then((user) => res.status(200).send(user))
-    .catch((err) => {
-      if (err.message === 'NotValidId') {
-        res.status(404).send({ message: 'Нет пользователя с таким id' });
-      } else {
-        res.status(500).send({ message: `Произошла ошибка: ${err.message}` });
-      }
-    });
-};
-
 const getCurrentUser = (req, res) => {
   User.findById(req.user._id)
     .orFail(new Error('NotValidId'))
@@ -36,16 +22,29 @@ const getCurrentUser = (req, res) => {
     });
 };
 
+const getUserById = (req, res, next) => {
+  User.findById(req.params.id)
+    .orFail(new Error('NullReturned'))
+
+    .then((data) => {
+      res.send(data);
+    })
+
+    .catch((err) => {
+      if (err.name === 'CastError') {
+      const error = new Error('Нет пользователя с таким id');
+      error.statusCode = 404;
+      return next(error);
+      }
+    })
+
+    .catch(next);
+}
+
 const createUser = (req, res, next) => {
   const {
     email, password, name, about, avatar,
   } = req.body;
-
-  if (!email || !password) {
-    const err = new Error('Некорректные данные пользователя');
-    err.statusCode = 400;
-    return next(err);
-  }
 
   return User.findOne({ email }).then((user) => {
     if (user) {
@@ -161,4 +160,4 @@ const updateAvatar = (req, res) => {
     });
 };
 
-module.exports = { createUser, getAllUsers, getUser, updateUser, updateAvatar, login, getCurrentUser, JWT_SECRET };
+module.exports = { createUser, getAllUsers, getUserById, updateUser, updateAvatar, login, getCurrentUser, JWT_SECRET };
