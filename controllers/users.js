@@ -46,6 +46,12 @@ const createUser = (req, res, next) => {
     email, password, name, about, avatar,
   } = req.body;
 
+  if (!email || !password) {
+    const err = new Error('Некорректные данные пользователя');
+    err.statusCode = 400;
+    return next(err);
+  }
+
   return User.findOne({ email }).then((user) => {
     if (user) {
       const err = new Error('Пользователь уже зарегистрирован');
@@ -56,17 +62,9 @@ const createUser = (req, res, next) => {
       .then((hash) => User.create({
         email, password: hash, name, about, avatar,
       }))
-      .then((data) => {
-        res.send({
-          email: data.email,
-          name: data.name,
-          about: data.about,
-          avatar: data.avatar,
-          _id: data._id,
-        });
-      })
+      .then((user) => res.status(200).send({ user }))
       .catch((err) => {
-        if (err.name === 'ValidationError') {
+        if (err.name === 'ValidationError' || err.name === 'CastError') {
           const error = new Error('Некорректные данные пользователя');
           error.statusCode = 400;
           return next(error);
