@@ -36,8 +36,8 @@ const getUserById = (req, res, next) => {
       error.statusCode = 404;
       return next(error);
       }
+      return next(err);
     })
-
     .catch(next);
 }
 
