@@ -68,7 +68,8 @@ const createUser = (req, res, next) => {
       })
       .catch((err) => {
         if (err.name === 'ValidationError') {
-          const error = new ValidationError('Некорректные данные пользователя');
+          const error = new Error('Некорректные данные пользователя');
+          error.statusCode = 400;
           return next(error);
         }
         return next(err);
@@ -77,22 +78,40 @@ const createUser = (req, res, next) => {
     .catch(next);
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    const err = new Error('Некорректные данные пользователя');
+    err.statusCode = 400;
+    return next(err);
+  }
 
   return User.findOne({ email }).select('+password')
     .then((user) => {
-      const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-      res.cookie('jwt', token, {
-        maxAge: 3600000 * 24 * 7,
-        httpOnly: true,
-        sameSite: true,
-      })
-        .end();
+      if (!user) {
+        const err = new Error('Некорректные данные пользователя');
+        err.statusCode = 401;
+        return next(err);
+      }
+
+      return bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            const err = new Error('Некорректные данные пользователя');
+            err.statusCode = 401;
+            return next(err);
+          }
+          const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+          return res.cookie('jwt', token, {
+            maxAge: 3600000 * 24 * 7,
+            httpOnly: true,
+            sameSite: true,
+          })
+            .end();
+        });
     })
-    .catch((err) => {
-      res.status(401).send({ message: err.message });
-    });
+    .catch(next);
 };
 
 const updateUser = (req, res) => {
