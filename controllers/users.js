@@ -2,45 +2,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
+const createError = require('http-errors');
+
 const JWT_SECRET = 'some-secret-key';
-
-const getAllUsers = (req, res) => {
-  User.find({})
-    .then((user) => res.send({ data: user }))
-    .catch((err) => res.status(500).send({ message: `Произошла ошибка: ${err.message}` }));
-};
-
-const getCurrentUser = (req, res) => {
-  User.findById(req.user._id)
-    .orFail(new Error('NotValidId'))
-    .then((user) => res.status(200).send(user))
-    .catch((err) => {
-      if (err.message === 'NotValidId') {
-        res.status(404).send({ message: 'Нет пользователя с таким id' });
-      } else {
-        res.status(500).send({ message: `Произошла ошибка: ${err.message}` });
-      }
-    });
-};
-
-const getUserById = (req, res, next) => {
-  User.findById(req.params.id)
-    .orFail(new Error('NullReturned'))
-
-    .then((data) => {
-      res.send(data);
-    })
-
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        const error = new Error('Нет пользователя с таким id');
-        error.statusCode = 404;
-        return next(error);
-      }
-      return next(err);
-    })
-    .catch(next);
-};
 
 const createUser = (req, res, next) => {
   const {
@@ -48,31 +12,26 @@ const createUser = (req, res, next) => {
   } = req.body;
 
   if (!email || !password) {
-    const err = new Error('Некорректные данные пользователя');
-    err.statusCode = 400;
-    return next(err);
+    throw createError(400, 'Email и пароль не должны быть пустыми');
   }
 
-  return User.findOne({ email }).then((user) => {
-    if (user) {
-      const err = new Error('Пользователь уже зарегистрирован');
-      err.statusCode = 409;
-      return next(err);
-    }
-    return bcrypt.hash(password, 10)
-      .then((hash) => User.create({
-        email, password: hash, name, about, avatar,
-      }))
-      .then((data) => res.status(200).send({ data }))
-      .catch((err) => {
-        if (err.name === 'ValidationError' || err.name === 'CastError') {
-          const error = new Error('Некорректные данные пользователя');
-          error.statusCode = 400;
-          return next(error);
-        }
-        return next(err);
-      });
-  })
+  return User.findOne({ email })
+    .then((user) => {
+      if (user) {
+        throw createError(409, 'Пользователь с таким email существует');
+      }
+      return bcrypt.hash(password, 10)
+        .then((hash) => User.create({
+          email, password: hash, name, about, avatar,
+        }))
+        .then((data) => res.status(200).send({ data }))
+        .catch((err) => {
+          if (err.name === 'ValidationError' || err.name === 'CastError') {
+            throw createError(400, 'Некорректные данные пользователя');
+          }
+          return next(err);
+        });
+    })
     .catch(next);
 };
 
@@ -80,35 +39,52 @@ const login = (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    const err = new Error('Некорректные данные пользователя');
-    err.statusCode = 400;
-    return next(err);
+    throw createError(400, 'Email и пароль не должны быть пустыми');
   }
 
   return User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
-        const err = new Error('Некорректные данные пользователя');
-        err.statusCode = 401;
-        return next(err);
+        throw createError(400, 'Неправильные почта или пароль');
       }
 
       return bcrypt.compare(password, user.password)
         .then((matched) => {
           if (!matched) {
-            const err = new Error('Некорректные данные пользователя');
-            err.statusCode = 401;
-            return next(err);
+            throw createError(400, 'Неправильные почта или пароль');
           }
           const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-          return res.status(200).send({ token });
-          /* return res.cookie('jwt', token, {
-            maxAge: 3600000 * 24 * 7,
-            httpOnly: true,
-            sameSite: true,
-          })
-            .end(); */
+          res
+            .cookie('jwt', token, {
+              maxAge: 3600000 * 24 * 7,
+              httpOnly: true,
+              sameSite: true,
+            })
+          .status(200).send({ user: user.toJSON() });
         });
+    })
+    .catch(next);
+};
+
+const getAllUsers = (req, res, next) => {
+  User.find({})
+    .then((users) => res.status(200).send(users))
+    .catch(next);
+};
+
+const getCurrentUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => res.status(200).send(user))
+    .catch(next);
+};
+
+const getUserById = (req, res, next) => {
+  User.findById(req.params.id)
+    .then((user) => {
+      if (!user) {
+        throw createError(404, 'Пользователя с таким id не существует');
+      }
+      res.status(200).send(user);
     })
     .catch(next);
 };
@@ -124,16 +100,13 @@ const updateUser = (req, res) => {
       new: true,
       runValidators: true,
     })
-    .then((result) => res.send({ data: result }))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({ message: err.message });
-        return;
+    .then((user) => {
+      if (!user) {
+        throw createError(400, 'Переданы некорректные данные');
       }
-      res.status(500).send({
-        message: `Произошла ошибка: ${err.message}`,
-      });
-    });
+      res.send(user);
+    })
+    .catch(next);
 };
 
 const updateAvatar = (req, res) => {
@@ -146,17 +119,8 @@ const updateAvatar = (req, res) => {
       new: true,
       runValidators: true,
     })
-    .then((result) => res.send({ data: result }))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({ message: err.message });
-        return;
-      }
-
-      res.status(500).send({
-        message: `Произошла ошибка: ${err.message}`,
-      });
-    });
+    .then((user) => res.status(200).send(user))
+    .catch(next);
 };
 
 module.exports = {

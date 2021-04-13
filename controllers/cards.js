@@ -1,61 +1,47 @@
 const Card = require('../models/card');
 
-const getAllCards = (req, res) => Card.find({})
-  .then((user) => res.send({ data: user }))
-  .catch((err) => res.status(500).send({ message: err.message }));
+const createError = require('http-errors');
+
+const getAllCards = (req, res, next) => {
+  Card.find({})
+    .then((cards) => res.status(200).send(cards))
+    .catch(next);
+};
 
 const deleteCard = (req, res, next) => Card.findById(req.params.id)
   .then((card) => {
     if (!card) {
-      throw new Error('Карточка не найдена');
+      throw new createError(404, 'Карточка не найдена');
     }
     if (JSON.stringify(card.owner) === JSON.stringify(req.user._id)) {
       return Card.findByIdAndRemove(req.params.id).then((data) => res.send(data));
     }
-    const err = new Error('Вы не можете удалить карточку другого пользователя');
-    err.statusCode = 403;
-    return next(err);
+    throw createError(403, 'Вы не можете удалить карточку другого пользователя');
   })
-  .catch((err) => {
-    if (err.name === 'CastError') {
-      const error = new Error('Карточка не найдена');
-      error.statusCode = 404;
-      return next(error);
-    }
-    return next(err);
-  });
+  .catch(next);
 
-const createCard = (req, res) => {
+const createCard = (req, res, next) => {
   const { name, link } = req.body;
   Card.create({ name, link, owner: req.user._id })
-    .then((card) => res.status(200).send(card))
-    .catch((err) => {
-      if (err.name === 'ValidationError') return res.status(400).send({ message: err.message });
-      return res.status(500).send({ message: 'Произошла ошибка' });
-    });
+  .then((card) => res.status(200).send(card))
+  .catch(next);
 };
 
 const likeCard = (req, res) => {
-  Card.findByIdAndUpdate(req.params.cardId,
+  Card.findByIdAndUpdate(req.params.id,
     {
       $addToSet: { likes: req.user._id },
     },
     {
       new: true,
     })
-    .then((result) => {
-      if (result) {
-        res.send({ data: result });
-        return;
+    .then((card) => {
+      if (!card) {
+        throw createError(404, 'Нет карточки с таким id');
       }
-
-      res.status(404).send({
-        message: 'Карточка не найдена',
-      });
+      return res.status(200).send(card);
     })
-    .catch((error) => res.status(500).send({
-      message: `На сервере произошла ошибка: ${error.message}`,
-    }));
+    .catch(next);
 };
 
 const dislikeCard = (req, res) => {
@@ -66,19 +52,13 @@ const dislikeCard = (req, res) => {
     {
       new: true,
     })
-    .then((result) => {
-      if (result) {
-        res.send({ data: result });
-        return;
+    .then((card) => {
+      if (!card) {
+        throw createError(404, 'Нет карточки с таким id');
       }
-
-      res.status(404).send({
-        message: 'Карточка не найдена',
-      });
+      return res.status(200).send(card);
     })
-    .catch((error) => res.status(500).send({
-      message: `Произошла ошибка: ${error.message}`,
-    }));
+    .catch(next);
 };
 
 module.exports = {

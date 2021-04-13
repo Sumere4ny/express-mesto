@@ -4,8 +4,8 @@ const {
 } = require('../controllers/users');
 
 usersRouter.get('/', getAllUsers);
-usersRouter.get('/:id', getUserById);
 usersRouter.get('/me', getCurrentUser);
+usersRouter.get('/:id', getUserById);
 usersRouter.patch('/me', updateUser);
 usersRouter.patch('/me/avatar', updateAvatar);
 
