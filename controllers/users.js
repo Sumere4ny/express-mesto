@@ -85,7 +85,13 @@ const getUserById = (req, res, next) => {
       }
       res.status(200).send(user);
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.kind === 'ObjectId') {
+        next(createError(400, 'Пользователь по указанному _id не найден!'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 const updateUser = (req, res, next) => {
