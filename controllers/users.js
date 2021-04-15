@@ -1,8 +1,7 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/user');
-
 const createError = require('http-errors');
+const User = require('../models/user');
 
 const JWT_SECRET = 'some-secret-key';
 
@@ -42,7 +41,7 @@ const login = (req, res, next) => {
     throw createError(400, 'Email и пароль не должны быть пустыми');
   }
 
-  return User.findOne({ email }).select('+password')
+  User.findUserByCredentials(email, password)
     .then((user) => {
       if (!user) {
         throw createError(400, 'Неправильные почта или пароль');
@@ -60,7 +59,7 @@ const login = (req, res, next) => {
               httpOnly: true,
               sameSite: true,
             })
-          .status(200).send({ user: user.toJSON() });
+            .status(200).send({ message: 'Авторизация успешна (токен в куках)!' });
         });
     })
     .catch(next);
@@ -89,7 +88,7 @@ const getUserById = (req, res, next) => {
     .catch(next);
 };
 
-const updateUser = (req, res) => {
+const updateUser = (req, res, next) => {
   const { name, about } = req.body;
   User.findByIdAndUpdate(req.user._id,
     {
@@ -109,7 +108,7 @@ const updateUser = (req, res) => {
     .catch(next);
 };
 
-const updateAvatar = (req, res) => {
+const updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
   User.findByIdAndUpdate(req.user._id,
     {
