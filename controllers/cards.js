@@ -17,7 +17,13 @@ const deleteCard = (req, res, next) => Card.findById(req.params.id)
     }
     throw CreateError(403, 'Вы не можете удалить карточку другого пользователя');
   })
-  .catch(next);
+  .catch((err) => {
+    if (err.kind === 'ObjectId') {
+      next(CreateError(400, 'Переданы некорректные данные при удалении карточки!'));
+    } else {
+      next(err);
+    }
+  });
 
 const createCard = (req, res, next) => {
   const { name, link } = req.body;
@@ -40,7 +46,13 @@ const likeCard = (req, res, next) => {
       }
       return res.status(200).send(card);
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.kind === 'ObjectId') {
+        next(CreateError(400, 'Переданы некорректные данные при постановке лайка!'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 const dislikeCard = (req, res, next) => {
@@ -57,7 +69,13 @@ const dislikeCard = (req, res, next) => {
       }
       return res.status(200).send(card);
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.kind === 'ObjectId') {
+        next(CreateError(400, 'Переданы некорректные данные при удалении лайка!'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 module.exports = {
