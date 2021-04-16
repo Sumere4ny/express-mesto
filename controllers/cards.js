@@ -29,7 +29,13 @@ const createCard = (req, res, next) => {
   const { name, link } = req.body;
   Card.create({ name, link, owner: req.user._id })
     .then((card) => res.status(200).send(card))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(CreateError(400, 'Переданы некорректные данные!'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 const likeCard = (req, res, next) => {
@@ -48,7 +54,7 @@ const likeCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        next(CreateError(400, 'Переданы некорректные данные при постановке лайка!'));
+        next(CreateError(400, 'Переданы некорректные данные!'));
       } else {
         next(err);
       }
@@ -71,7 +77,7 @@ const dislikeCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        next(CreateError(400, 'Переданы некорректные данные при удалении лайка!'));
+        next(CreateError(400, 'Переданы некорректные данные!'));
       } else {
         next(err);
       }

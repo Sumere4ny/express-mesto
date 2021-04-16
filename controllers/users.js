@@ -96,6 +96,9 @@ const getUserById = (req, res, next) => {
 
 const updateUser = (req, res, next) => {
   const { name, about } = req.body;
+  if (!name || !about) {
+    throw createError(400, 'Поля не должны быть пустыми');
+  }
   User.findByIdAndUpdate(req.user._id,
     {
       name,
@@ -125,7 +128,13 @@ const updateAvatar = (req, res, next) => {
       runValidators: true,
     })
     .then((user) => res.status(200).send(user))
-    .catch(next);
+    .catch((err) => {
+      if (err.kind === 'ObjectId' || err.name === 'ValidationError' || err.name === 'CastError') {
+        next(createError(400, 'Переданы некорректные данные!'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 module.exports = {
