@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const auth = require('./middlewares/auth.js');
+const { requestLogger, errorLogger } = require('./middlewares/logger');
 const usersRouter = require('./routes/users.js');
 const cardsRouter = require('./routes/cards.js');
 const { createUser, login } = require('./controllers/users');
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use(cookieParser());
+app.use(requestLogger);
 
 app.use('/signin', login);
 app.use('/signup', createUser);
@@ -34,6 +36,8 @@ app.use('/*', (req, res) => {
     message: 'Запрашиваемый ресурс не найден',
   });
 });
+
+app.use(errorLogger);
 
 app.use((err, req, res, next) => {
   // если у ошибки нет статуса, выставляем 500
