@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const createError = require('http-errors');
 const User = require('../models/user');
 
-const JWT_SECRET = 'some-secret-key';
+const { NODE_ENV, JWT_SECRET } = process.env;
 
 const createUser = (req, res, next) => {
   const {
@@ -52,7 +52,9 @@ const login = (req, res, next) => {
           if (!matched) {
             throw createError(400, 'Неправильные почта или пароль');
           }
-          const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+          const token = jwt.sign({ _id: user._id },
+            NODE_ENV === 'production' ? JWT_SECRET : 'some-secret-key',
+            { expiresIn: '7d' });
           res
             .cookie('jwt', token, {
               maxAge: 3600000 * 24 * 7,
