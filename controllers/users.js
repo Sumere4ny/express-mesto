@@ -56,12 +56,12 @@ const login = (req, res, next) => {
             NODE_ENV === 'production' ? JWT_SECRET : 'some-secret-key',
             { expiresIn: '7d' });
           res
-            .cookie('jwt', token, {
+            /* .cookie('jwt', token, {
               maxAge: 3600000 * 24 * 7,
               httpOnly: true,
               sameSite: true,
-            })
-            .status(200).send({ message: 'Авторизация успешна (токен в куках)!' });
+            }) */
+            .status(200).send({ token });
         });
     })
     .catch(next);
