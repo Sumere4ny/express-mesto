@@ -1,4 +1,5 @@
 require('dotenv').config();
+const cors = require('cors');
 const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
@@ -7,7 +8,6 @@ const { requestLogger, errorLogger } = require('./middlewares/logger');
 const usersRouter = require('./routes/users.js');
 const cardsRouter = require('./routes/cards.js');
 const { createUser, login } = require('./controllers/users');
-const corsMiddleware = require('./middlewares/cors.js');
 
 const app = express();
 const { PORT = 3000 } = process.env;
@@ -19,8 +19,7 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   useUnifiedTopology: true,
 });
 
-app.options('*', corsMiddleware);
-app.use(corsMiddleware);
+app.use(cors);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

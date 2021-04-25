@@ -12,6 +12,7 @@ const auth = (req, res, next) => {
     }
 
     const token = authorization.replace('Bearer ', '');
+    console.log(token);
 
     const payload = jwt.verify(token, NODE_ENV === 'production' ? JWT_SECRET : 'some-secret-key');
     req.user = payload;
