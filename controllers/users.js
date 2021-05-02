@@ -23,7 +23,15 @@ const createUser = (req, res, next) => {
         .then((hash) => User.create({
           email, password: hash, name, about, avatar,
         }))
-        .then((data) => res.status(200).send({ data }))
+        .then((data) => res.status(200).send(
+          {
+            _id: data._id,
+            name: data.name,
+            about: data.about,
+            avatar: data.avatar,
+            email: data.email,
+          },
+        ))
         .catch((err) => {
           if (err.name === 'ValidationError' || err.name === 'CastError') {
             throw createError(400, 'Некорректные данные пользователя');
