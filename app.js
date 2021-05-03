@@ -2,11 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
-const { celebrate, Joi } = require('celebrate');
 const { errors } = require('celebrate');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const createError = require('http-errors');
+const {
+  createUserValidation,
+  loginValidation,
+} = require('./middlewares/validation');
 const auth = require('./middlewares/auth.js');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const usersRouter = require('./routes/users.js');
@@ -33,13 +36,13 @@ const limiter = rateLimit({
   max: 100,
 });
 
+app.use(requestLogger);
 app.use(limiter);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use(cookieParser());
-app.use(requestLogger);
 
 app.get('/crash-test', () => {
   setTimeout(() => {
@@ -47,22 +50,9 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-app.post('/signup', celebrate({
-  body: Joi.object().keys({
-    email: Joi.string().required().email(),
-    password: Joi.string().required().min(8),
-    name: Joi.string().min(2).max(30),
-    about: Joi.string().min(2).max(30),
-    avatar: Joi.string().regex(/^(https?:\/\/)?([\w-]{1,32}\.[\w-]{1,32})[^\s@]*$/),
-  }),
-}), createUser);
+app.post('/signup', createUserValidation, createUser);
 
-app.post('/signin', celebrate({
-  body: Joi.object().keys({
-    email: Joi.string().required().email(),
-    password: Joi.string().required().min(8),
-  }),
-}), login);
+app.post('/signin', loginValidation, login);
 
 app.use(auth);
 

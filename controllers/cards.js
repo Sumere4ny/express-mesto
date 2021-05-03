@@ -7,13 +7,13 @@ const getAllCards = (req, res, next) => {
     .catch(next);
 };
 
-const deleteCard = (req, res, next) => Card.findById(req.params.id)
+const deleteCard = (req, res, next) => Card.findById(req.params.cardId)
   .then((card) => {
     if (!card) {
       throw new CreateError(404, 'Карточка не найдена');
     }
     if (JSON.stringify(card.owner) === JSON.stringify(req.user._id)) {
-      return Card.findByIdAndRemove(req.params.id).then((data) => res.send(data));
+      return Card.findByIdAndRemove(req.params.cardId).then((data) => res.send(data));
     }
     throw CreateError(403, 'Вы не можете удалить карточку другого пользователя');
   })
